@@ -103,6 +103,16 @@ fun ProjectList(name: String): ProjectList =
     ProjectList.`init`(name)
 ```
 
+Parameters that were `Optional<T>`, `OptionalLong`, `OptionalInt`, or `OptionalDouble` in the original swift-java source are emitted as nullable Kotlin types:
+
+```kotlin
+// Original swift-java: Optional<String> outfitId
+// Rewritten Java: String outfitId
+// Generated Kotlin factory:
+fun CreationResumeRoute(projectId: String, characterId: String, outfitId: String?, stage: Stage): CreationResumeRoute =
+    CreationResumeRoute.`init`(projectId, characterId, outfitId, stage)
+```
+
 Trailing `SwiftArena` parameters are automatically stripped from the factory signatures. Arena-only `init` methods are skipped.
 
 ## Usage

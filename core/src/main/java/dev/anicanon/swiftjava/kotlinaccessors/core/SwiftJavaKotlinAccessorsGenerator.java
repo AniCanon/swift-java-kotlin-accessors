@@ -44,7 +44,7 @@ public final class SwiftJavaKotlinAccessorsGenerator {
             Files.writeString(outputFile, rewritten, StandardCharsets.UTF_8);
 
             if (kotlinGenerator != null && options.shouldRewritePackage(packageName)) {
-                String kotlin = kotlinGenerator.generate(rewritten);
+                String kotlin = kotlinGenerator.generate(rewritten, source);
                 if (kotlin != null) {
                     String javaFileName = file.getFileName().toString();
                     String ktFileName = javaFileName.replace(".java", "Factories.kt");
