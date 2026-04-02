@@ -6,11 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public final class SwiftJavaKotlinAccessorsGenerator {
-    private static final Pattern PACKAGE_PATTERN = Pattern.compile("(?m)^package\\s+([\\w.]+);\\s*$");
 
     public void generate(Path inputDir, Path outputDir, RewriteOptions options) throws IOException {
         Files.createDirectories(outputDir);
@@ -58,7 +56,7 @@ public final class SwiftJavaKotlinAccessorsGenerator {
     }
 
     private String extractPackageName(String source) {
-        Matcher matcher = PACKAGE_PATTERN.matcher(source);
+        Matcher matcher = SourceRewriteUtils.PACKAGE_PATTERN.matcher(source);
         if (matcher.find()) {
             return matcher.group(1);
         }

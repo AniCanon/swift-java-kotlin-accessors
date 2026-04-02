@@ -115,6 +115,35 @@ fun CreationResumeRoute(projectId: String, characterId: String, outfitId: String
 
 Trailing `SwiftArena` parameters are automatically stripped from the factory signatures. Arena-only `init` methods are skipped.
 
+## Installation
+
+### Composite build (recommended for development)
+
+In your `settings.gradle.kts`:
+
+```kotlin
+includeBuild("/path/to/swift-java-kotlin-accessors")
+```
+
+### Maven Local
+
+Build and publish locally:
+
+```shell
+./gradlew publishToMavenLocal
+```
+
+Then add the plugin to your `settings.gradle.kts`:
+
+```kotlin
+pluginManagement {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+    }
+}
+```
+
 ## Usage
 
 Apply the plugin in your `build.gradle.kts`:

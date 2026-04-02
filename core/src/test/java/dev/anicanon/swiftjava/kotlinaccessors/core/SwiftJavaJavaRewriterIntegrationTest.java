@@ -115,6 +115,40 @@ class SwiftJavaJavaRewriterIntegrationTest {
     }
 
     @Test
+    void fullPipelineCombinesOptionalReturnOptionalParameterAndTrailingArena() {
+        String input = String.join("\n",
+            "package com.example;",
+            "",
+            "public class MyModel {",
+            "    public static Optional<String> findTag(Optional<String> category, SwiftArena swiftArena) {",
+            "        return (result != 0L) ? Optional.of(value) : Optional.empty();",
+            "    }",
+            "}",
+            ""
+        );
+        String result = rewriter.rewrite(input);
+
+        // Optional return is unwrapped to String with @Nullable
+        assertTrue(result.contains("@Nullable"), "Should add @Nullable annotation for Optional return");
+        assertTrue(result.contains("public static String findTag(String category, SwiftArena swiftArena)"),
+            "Should unwrap Optional return and Optional parameter");
+        // Optional.of/empty replaced with null-returning ternary
+        assertTrue(result.contains("return (result != 0L) ? value : null;"),
+            "Should rewrite Optional return expression");
+        // Optional parameter is unwrapped (Optional<String> -> String)
+        assertFalse(result.contains("Optional<String>"), "Should not contain Optional<String> anywhere");
+        // Static trailing arena overload generated
+        assertTrue(result.contains("public static String findTag(String category)"),
+            "Should generate arena-free overload");
+        assertTrue(result.contains("DEFAULT_SWIFT_JAVA_AUTO_ARENA"),
+            "Should reference default arena in overload");
+        // Nullable import added
+        assertTrue(result.contains("import org.jetbrains.annotations.Nullable;"));
+        // Rewrite marker present
+        assertTrue(result.contains("// Rewritten by swift-java-kotlin-accessors. Do not edit."));
+    }
+
+    @Test
     void idempotent() {
         String input = String.join("\n",
             "package com.example;",

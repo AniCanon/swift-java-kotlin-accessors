@@ -16,9 +16,6 @@ public final class KotlinFactoryGenerator {
     private static final Pattern STATIC_INIT_PATTERN = Pattern.compile(
         "(?m)^\\s*public static (\\w+) init\\(([^)]*)\\)\\s*\\{"
     );
-    private static final Pattern PACKAGE_PATTERN = Pattern.compile(
-        "(?m)^package\\s+([\\w.]+);\\s*$"
-    );
     private static final Pattern OPTIONAL_PARAM_PATTERN = Pattern.compile(
         "\\bOptional<([\\w.$\\[\\]<>]+)>\\s+(\\w+)\\b"
     );
@@ -82,7 +79,7 @@ public final class KotlinFactoryGenerator {
     }
 
     private String extractPackageName(String source) {
-        Matcher matcher = PACKAGE_PATTERN.matcher(source);
+        Matcher matcher = SourceRewriteUtils.PACKAGE_PATTERN.matcher(source);
         return matcher.find() ? matcher.group(1) : null;
     }
 
@@ -165,11 +162,8 @@ public final class KotlinFactoryGenerator {
     }
 
     private String stripTrailingArena(String parameters) {
-        String suffix = ", SwiftArena swiftArena";
-        if (parameters.endsWith(suffix)) {
-            return parameters.substring(0, parameters.length() - suffix.length());
-        }
-        return parameters;
+        String stripped = SourceRewriteUtils.stripTrailingArenaParameter(parameters);
+        return stripped != null ? stripped : parameters;
     }
 
     private String convertToKotlinParams(String javaParams, Set<String> optionalParamNames) {
@@ -224,19 +218,7 @@ public final class KotlinFactoryGenerator {
     }
 
     private String buildArguments(String parameters) {
-        if (parameters.isEmpty()) {
-            return "";
-        }
-        String[] parts = parameters.split(",\\s*");
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
-            String param = parts[i].trim();
-            int lastSpace = param.lastIndexOf(' ');
-            String name = lastSpace >= 0 ? param.substring(lastSpace + 1) : param;
-            if (i > 0) sb.append(", ");
-            sb.append(name);
-        }
-        return sb.toString();
+        return SourceRewriteUtils.invocationArguments(parameters);
     }
 
     private record InitMethod(String parameters, Set<String> optionalParamNames) {}

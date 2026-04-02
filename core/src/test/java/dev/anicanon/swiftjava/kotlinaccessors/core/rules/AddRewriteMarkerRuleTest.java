@@ -26,6 +26,6 @@ class AddRewriteMarkerRuleTest {
     void handlesSourceWithoutNewline() {
         String input = "package com.example;";
         String result = rule.apply(input);
-        assertEquals("// Rewritten by swift-java-kotlin-accessors. Do not edit.\npackage com.example;", result);
+        assertEquals("package com.example;\n// Rewritten by swift-java-kotlin-accessors. Do not edit.\n", result);
     }
 }

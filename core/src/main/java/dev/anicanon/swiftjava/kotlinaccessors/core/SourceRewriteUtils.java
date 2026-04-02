@@ -3,6 +3,7 @@ package dev.anicanon.swiftjava.kotlinaccessors.core;
 import java.util.regex.Pattern;
 
 public final class SourceRewriteUtils {
+    public static final Pattern PACKAGE_PATTERN = Pattern.compile("(?m)^package\\s+([\\w.]+);\\s*$");
     private static final Pattern ENUM_CASE_ACCESSOR = Pattern.compile("getAs[A-Z].*");
 
     private SourceRewriteUtils() {}
@@ -11,6 +12,13 @@ public final class SourceRewriteUtils {
         return ENUM_CASE_ACCESSOR.matcher(methodName).matches();
     }
 
+    /**
+     * Finds the index of the closing brace that matches the opening brace at {@code openBrace}.
+     * <p>
+     * Note: this method does not account for braces inside string literals or comments.
+     * This is safe because the input is machine-generated jextract code which does not
+     * contain brace characters in string literals.
+     */
     public static int findMatchingBrace(String source, int openBrace) {
         int depth = 0;
         for (int index = openBrace; index < source.length(); index++) {

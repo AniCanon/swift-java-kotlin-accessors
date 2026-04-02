@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    `maven-publish`
 }
 
 java {
@@ -17,4 +18,15 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+            groupId = rootProject.group.toString()
+            artifactId = "kotlin-accessors-core"
+            version = rootProject.version.toString()
+        }
+    }
 }

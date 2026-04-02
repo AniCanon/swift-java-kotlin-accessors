@@ -12,7 +12,7 @@ public final class AddRewriteMarkerRule implements RewriteRule {
         }
         int packageEnd = source.indexOf('\n');
         if (packageEnd < 0) {
-            return REWRITTEN_MARKER + "\n" + source;
+            return source + "\n" + REWRITTEN_MARKER + "\n";
         }
         return source.substring(0, packageEnd + 1) + REWRITTEN_MARKER + "\n" + source.substring(packageEnd + 1);
     }
