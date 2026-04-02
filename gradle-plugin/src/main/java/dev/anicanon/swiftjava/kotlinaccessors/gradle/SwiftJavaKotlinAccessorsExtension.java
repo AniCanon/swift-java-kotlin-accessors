@@ -11,9 +11,11 @@ public abstract class SwiftJavaKotlinAccessorsExtension {
     public abstract DirectoryProperty getOutputDir();
     public abstract ListProperty<String> getPackagePrefixes();
     public abstract Property<String> getNullableAnnotationFqcn();
+    public abstract Property<Boolean> getGenerateKotlinFactories();
 
     public SwiftJavaKotlinAccessorsExtension(ObjectFactory objects) {
         getPackagePrefixes().convention(List.of());
         getNullableAnnotationFqcn().convention("");
+        getGenerateKotlinFactories().convention(false);
     }
 }

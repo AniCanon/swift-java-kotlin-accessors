@@ -27,11 +27,16 @@ public abstract class GenerateSwiftJavaKotlinAccessorsTask extends DefaultTask {
     @Input
     public abstract Property<String> getNullableAnnotationFqcn();
 
+    @Optional
+    @Input
+    public abstract Property<Boolean> getGenerateKotlinFactories();
+
     @TaskAction
     public void generate() throws IOException {
         RewriteOptions options = new RewriteOptions(
             getPackagePrefixes().getOrElse(java.util.List.of()),
-            getNullableAnnotationFqcn().getOrElse("")
+            getNullableAnnotationFqcn().getOrElse(""),
+            getGenerateKotlinFactories().getOrElse(false)
         );
         new SwiftJavaKotlinAccessorsGenerator().generate(
             getInputDir().get().getAsFile().toPath(),

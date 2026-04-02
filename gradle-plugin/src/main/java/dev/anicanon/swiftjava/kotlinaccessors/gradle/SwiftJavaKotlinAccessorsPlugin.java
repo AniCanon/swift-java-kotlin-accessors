@@ -20,6 +20,7 @@ public final class SwiftJavaKotlinAccessorsPlugin implements Plugin<Project> {
                 task.getOutputDir().set(extension.getOutputDir());
                 task.getPackagePrefixes().set(extension.getPackagePrefixes());
                 task.getNullableAnnotationFqcn().set(extension.getNullableAnnotationFqcn());
+                task.getGenerateKotlinFactories().set(extension.getGenerateKotlinFactories());
             }
         );
     }

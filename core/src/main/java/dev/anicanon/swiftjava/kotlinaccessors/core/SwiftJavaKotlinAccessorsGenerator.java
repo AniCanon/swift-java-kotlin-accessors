@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -16,14 +15,17 @@ public final class SwiftJavaKotlinAccessorsGenerator {
     public void generate(Path inputDir, Path outputDir, RewriteOptions options) throws IOException {
         Files.createDirectories(outputDir);
         SwiftJavaJavaRewriter rewriter = new SwiftJavaJavaRewriter(options);
+        KotlinFactoryGenerator kotlinGenerator = options.isGenerateKotlinFactories()
+            ? new KotlinFactoryGenerator() : null;
         try (Stream<Path> paths = Files.walk(inputDir)) {
             paths.filter(Files::isRegularFile)
                 .sorted(Comparator.naturalOrder())
-                .forEach(path -> rewriteFile(path, inputDir, outputDir, options, rewriter));
+                .forEach(path -> rewriteFile(path, inputDir, outputDir, options, rewriter, kotlinGenerator));
         }
     }
 
-    private void rewriteFile(Path file, Path inputDir, Path outputDir, RewriteOptions options, SwiftJavaJavaRewriter rewriter) {
+    private void rewriteFile(Path file, Path inputDir, Path outputDir, RewriteOptions options,
+                             SwiftJavaJavaRewriter rewriter, KotlinFactoryGenerator kotlinGenerator) {
         try {
             Path relativePath = inputDir.relativize(file);
             Path outputFile = outputDir.resolve(relativePath);
@@ -40,6 +42,16 @@ public final class SwiftJavaKotlinAccessorsGenerator {
                 ? rewriter.rewrite(source)
                 : source;
             Files.writeString(outputFile, rewritten, StandardCharsets.UTF_8);
+
+            if (kotlinGenerator != null && options.shouldRewritePackage(packageName)) {
+                String kotlin = kotlinGenerator.generate(rewritten);
+                if (kotlin != null) {
+                    String javaFileName = file.getFileName().toString();
+                    String ktFileName = javaFileName.replace(".java", "Factories.kt");
+                    Path ktFile = outputFile.getParent().resolve(ktFileName);
+                    Files.writeString(ktFile, kotlin, StandardCharsets.UTF_8);
+                }
+            }
         } catch (IOException e) {
             throw new RuntimeException("Failed to rewrite " + file, e);
         }

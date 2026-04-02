@@ -48,6 +48,61 @@ class SwiftJavaKotlinAccessorsGeneratorTest {
     }
 
     @Test
+    void generatesKotlinFactoryFilesWhenEnabled() throws IOException {
+        Path inputDir = tempDir.resolve("input");
+        Path outputDir = tempDir.resolve("output");
+        Path packageDir = inputDir.resolve("com/example");
+        Files.createDirectories(packageDir);
+
+        String javaSource = String.join("\n",
+            "package com.example;",
+            "",
+            "public class ProjectList {",
+            "    public static ProjectList init(String name, SwiftArena swiftArena) {",
+            "        return new ProjectList();",
+            "    }",
+            "}",
+            ""
+        );
+        Files.writeString(packageDir.resolve("ProjectList.java"), javaSource, StandardCharsets.UTF_8);
+
+        RewriteOptions options = new RewriteOptions(List.of(), "org.jetbrains.annotations.Nullable", true);
+        new SwiftJavaKotlinAccessorsGenerator().generate(inputDir, outputDir, options);
+
+        Path ktFile = outputDir.resolve("com/example/ProjectListFactories.kt");
+        assertTrue(Files.exists(ktFile), "Kotlin factory file should be generated");
+        String kotlin = Files.readString(ktFile, StandardCharsets.UTF_8);
+        assertTrue(kotlin.contains("fun ProjectList(name: String): ProjectList ="));
+        assertTrue(kotlin.contains("ProjectList.`init`(name)"));
+    }
+
+    @Test
+    void doesNotGenerateKotlinFactoriesWhenDisabled() throws IOException {
+        Path inputDir = tempDir.resolve("input");
+        Path outputDir = tempDir.resolve("output");
+        Path packageDir = inputDir.resolve("com/example");
+        Files.createDirectories(packageDir);
+
+        String javaSource = String.join("\n",
+            "package com.example;",
+            "",
+            "public class ProjectList {",
+            "    public static ProjectList init(String name) {",
+            "        return new ProjectList();",
+            "    }",
+            "}",
+            ""
+        );
+        Files.writeString(packageDir.resolve("ProjectList.java"), javaSource, StandardCharsets.UTF_8);
+
+        RewriteOptions options = new RewriteOptions(List.of(), "org.jetbrains.annotations.Nullable");
+        new SwiftJavaKotlinAccessorsGenerator().generate(inputDir, outputDir, options);
+
+        Path ktFile = outputDir.resolve("com/example/ProjectListFactories.kt");
+        assertFalse(Files.exists(ktFile), "Kotlin factory file should not be generated when disabled");
+    }
+
+    @Test
     void respectsPackagePrefixFilter() throws IOException {
         Path inputDir = tempDir.resolve("input");
         Path outputDir = tempDir.resolve("output");

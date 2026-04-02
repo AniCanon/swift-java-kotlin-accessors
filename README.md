@@ -84,6 +84,30 @@ public static MyType create(String name) {
 }
 ```
 
+### Kotlin factory functions (optional)
+
+When enabled, generates top-level Kotlin factory functions that shadow the class name, giving you constructor-like syntax for swift-java types:
+
+```kotlin
+// Without factory functions (default)
+val list = ProjectList.`init`("My Projects")
+
+// With factory functions enabled
+val list = ProjectList("My Projects")
+```
+
+For each `public static ClassName init(...)` method in the rewritten Java, a corresponding Kotlin function is generated in a `*Factories.kt` file:
+
+```kotlin
+// Generated: ProjectListFactories.kt
+package com.example
+
+fun ProjectList(name: String): ProjectList =
+    ProjectList.`init`(name)
+```
+
+Trailing `SwiftArena` parameters are automatically stripped from the factory signatures. Arena-only `init` methods are skipped.
+
 ## Usage
 
 Apply the plugin in your `build.gradle.kts`:
@@ -105,6 +129,9 @@ swiftJavaKotlinAccessors {
 
     // Fully qualified @Nullable annotation to add to rewritten methods
     nullableAnnotationFqcn.set("org.jetbrains.annotations.Nullable")
+
+    // Generate Kotlin factory functions for swift-java init methods (default: false)
+    generateKotlinFactories.set(true)
 }
 ```
 
@@ -124,6 +151,7 @@ The rewritten sources are written to `outputDir`. Point your Kotlin source set a
 | `outputDir` | `DirectoryProperty` | *required* | Output directory for rewritten sources |
 | `packagePrefixes` | `ListProperty<String>` | `[]` (all) | Only rewrite classes in matching packages |
 | `nullableAnnotationFqcn` | `Property<String>` | `""` (none) | FQCN of `@Nullable` annotation to insert |
+| `generateKotlinFactories` | `Property<Boolean>` | `false` | Generate Kotlin factory functions for `init` methods |
 
 ## Design
 
