@@ -38,13 +38,16 @@ public final class StaticTrailingArenaOverloadRule implements RewriteRule {
             }
             invocationArguments = invocationArguments + "SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA";
 
-            String overload = "\n"
-                + indent + "public static " + returnType + " " + methodName + "(" + parametersWithoutArena + ") {\n"
-                + indent + "  return " + methodName + "(" + invocationArguments + ");\n"
-                + indent + "}\n";
-
             output.append(source, last, methodEnd);
-            output.append(overload);
+
+            String overloadSignature = methodName + "(" + parametersWithoutArena + ")";
+            if (!source.contains(overloadSignature)) {
+                String overload = "\n"
+                    + indent + "public static " + returnType + " " + methodName + "(" + parametersWithoutArena + ") {\n"
+                    + indent + "  return " + methodName + "(" + invocationArguments + ");\n"
+                    + indent + "}\n";
+                output.append(overload);
+            }
             last = methodEnd;
         }
         output.append(source.substring(last));

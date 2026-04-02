@@ -23,13 +23,17 @@ public final class ArenaGetterOverloadRule implements RewriteRule {
             String indent = matcher.group(1);
             String returnType = matcher.group(2);
             String methodName = matcher.group(3);
-            String overload = "\n"
-                + indent + "public " + returnType + " " + methodName + "() {\n"
-                + indent + "  return " + methodName + "(SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);\n"
-                + indent + "}\n";
 
             output.append(source, last, methodEnd);
-            output.append(overload);
+
+            String noArgSignature = methodName + "()";
+            if (!source.contains(noArgSignature)) {
+                String overload = "\n"
+                    + indent + "public " + returnType + " " + methodName + "() {\n"
+                    + indent + "  return " + methodName + "(SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);\n"
+                    + indent + "}\n";
+                output.append(overload);
+            }
             last = methodEnd;
         }
         output.append(source.substring(last));
