@@ -180,6 +180,68 @@ class KotlinFactoryGeneratorTest {
     }
 
     @Test
+    void deduplicatesArenaAndNonArenaOverloads() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public class Model {",
+            "    public static Model init(String name, SwiftArena swiftArena) {",
+            "        return new Model();",
+            "    }",
+            "    public static Model init(String name) {",
+            "        return init(name, DEFAULT_ARENA);",
+            "    }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java);
+        assertNotNull(kotlin);
+        // Should produce exactly one factory, not two
+        int count = kotlin.split("fun Model\\(").length - 1;
+        assertEquals(1, count, "Should deduplicate arena/non-arena overloads");
+    }
+
+    @Test
+    void mapsFullyQualifiedJavaLangTypes() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public class Item {",
+            "    public static Item init(java.lang.String name, java.lang.String desc) {",
+            "        return new Item();",
+            "    }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun Item(name: String, desc: String): Item ="));
+        assertFalse(kotlin.contains("java.lang.String"));
+    }
+
+    @Test
+    void mapsArrayTypes() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public class Container {",
+            "    public static Container init(Item[] items, java.lang.String[] names) {",
+            "        return new Container();",
+            "    }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("items: Array<Item>"));
+        assertTrue(kotlin.contains("names: Array<String>"));
+        assertFalse(kotlin.contains("[]"));
+    }
+
+    @Test
     void handlesFinalClass() {
         String java = String.join("\n",
             "package com.example;",

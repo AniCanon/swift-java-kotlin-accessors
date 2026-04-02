@@ -1,7 +1,9 @@
 package dev.anicanon.swiftjava.kotlinaccessors.core;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -65,6 +67,7 @@ public final class KotlinFactoryGenerator {
     }
 
     private List<InitMethod> findInitMethods(String source, String className) {
+        Set<String> seen = new HashSet<>();
         List<InitMethod> methods = new ArrayList<>();
         Matcher matcher = STATIC_INIT_PATTERN.matcher(source);
         while (matcher.find()) {
@@ -79,7 +82,10 @@ public final class KotlinFactoryGenerator {
             }
             // Strip trailing SwiftArena parameter if present
             String cleanedParams = stripTrailingArena(parameters);
-            methods.add(new InitMethod(cleanedParams));
+            // Deduplicate — the rewriter adds arena-free overloads that collapse to identical signatures
+            if (seen.add(cleanedParams)) {
+                methods.add(new InitMethod(cleanedParams));
+            }
         }
         return methods;
     }
@@ -111,7 +117,13 @@ public final class KotlinFactoryGenerator {
     }
 
     private String mapToKotlinType(String javaType) {
-        return switch (javaType) {
+        if (javaType.endsWith("[]")) {
+            String elementType = mapToKotlinType(javaType.substring(0, javaType.length() - 2));
+            return "Array<" + elementType + ">";
+        }
+        // Strip java.lang. prefix
+        String type = javaType.startsWith("java.lang.") ? javaType.substring("java.lang.".length()) : javaType;
+        return switch (type) {
             case "int", "Integer" -> "Int";
             case "long", "Long" -> "Long";
             case "double", "Double" -> "Double";
@@ -120,7 +132,7 @@ public final class KotlinFactoryGenerator {
             case "byte", "Byte" -> "Byte";
             case "short", "Short" -> "Short";
             case "char", "Character" -> "Char";
-            default -> javaType;
+            default -> type;
         };
     }
 
