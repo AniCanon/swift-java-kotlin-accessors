@@ -2,7 +2,14 @@
 
 A Gradle plugin that post-processes [swift-java](https://github.com/swiftlang/swift-java) generated Java bindings into Kotlin-friendly sources.
 
-`swift-java` generates Java classes with `Optional<T>` return types, primitive Optional wrappers, and arena-based getters. These work fine from Java but are awkward from Kotlin. This plugin rewrites them into idiomatic patterns — nullable returns, boxed primitives, and no-arg overloads — so Kotlin consumers get natural property access without hand-written glue code.
+## Why
+
+[swift-java](https://github.com/swiftlang/swift-java) bridges Swift APIs into JVM code, but its generated Java bindings follow patterns that don't translate well to Kotlin:
+
+- **Optional return types** — Kotlin has built-in nullability (`String?`), so `Optional<String>` adds friction instead of safety. Kotlin developers expect nullable types, not Optional wrappers.
+- **Primitive Optional wrappers** — `OptionalLong`, `OptionalInt`, and `OptionalDouble` have no Kotlin equivalent and can't be used with Kotlin's null-safe operators (`?.`, `?:`, `!!`).
+- **Arena-based getters** — Every property accessor requires an explicit `SwiftArena` parameter, which breaks Kotlin property access syntax and clutters call sites.
+- **Static factory `init` methods** — Swift initializers become `ClassName.init(...)` in Java, which is awkward in Kotlin since `init` is a reserved word (requiring backtick escaping).
 
 ## Transforms
 
@@ -23,7 +30,7 @@ public String getName(SwiftArena arena) {
 
 ### Primitive Optionals to boxed nullable
 
-`OptionalLong`, `OptionalInt`, and `OptionalDouble` are rewritten to their boxed nullable equivalents.
+Same treatment applies to primitive Optional wrappers.
 
 ```java
 // Before
@@ -56,29 +63,19 @@ public void update(String name, Integer count) {
 }
 ```
 
-### No-arg arena getter overloads
+### Arena parameter overloads
 
-Getters that take a `SwiftArena` parameter get a no-arg overload using the default arena.
+Methods that take a `SwiftArena` parameter get an overload that uses the default arena. This applies to both instance getters and static methods with a trailing arena parameter.
 
 ```java
-// Original (preserved)
+// Instance getter — original preserved, no-arg overload added
 public MyType getValue(SwiftArena swiftArena) { ... }
-
-// Added overload
 public MyType getValue() {
     return getValue(SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);
 }
-```
 
-### Static trailing arena overloads
-
-Static methods where `SwiftArena` is the last parameter get an overload without it.
-
-```java
-// Original (preserved)
+// Static method — original preserved, arena-free overload added
 public static MyType create(String name, SwiftArena swiftArena) { ... }
-
-// Added overload
 public static MyType create(String name) {
     return create(name, SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);
 }
@@ -158,7 +155,7 @@ The rewritten sources are written to `outputDir`. Point your Kotlin source set a
 The rewriter is a pipeline of composable `RewriteRule` implementations. Each rule is a single-responsibility transformation that can be tested independently. Optional type handling is data-driven via `OptionalVariant`, so adding support for new Optional types requires no new rule classes.
 
 ```
-Source -> AddRewriteMarker -> AddNullableImport -> OptionalInterface* -> OptionalMethod* -> OptionalParameter -> ArenaGetter -> StaticArena -> Output
+Source -> AddRewriteMarker -> AddNullableImport -> OptionalInterface* -> OptionalMethod* -> OptionalParameter -> ArenaOverloads -> Output
 ```
 
 ## Requirements
