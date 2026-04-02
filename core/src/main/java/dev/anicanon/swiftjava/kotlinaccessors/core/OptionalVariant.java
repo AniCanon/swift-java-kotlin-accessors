@@ -51,9 +51,6 @@ public final class OptionalVariant {
     }
 
     public boolean extractIsStatic(Matcher methodMatcher) {
-        if (generic) {
-            return methodMatcher.group(2) != null;
-        }
         return methodMatcher.group(2) != null;
     }
 

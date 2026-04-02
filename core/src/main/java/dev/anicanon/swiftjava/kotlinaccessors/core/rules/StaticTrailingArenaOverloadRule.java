@@ -40,8 +40,8 @@ public final class StaticTrailingArenaOverloadRule implements RewriteRule {
 
             output.append(source, last, methodEnd);
 
-            String overloadSignature = methodName + "(" + parametersWithoutArena + ")";
-            if (!source.contains(overloadSignature)) {
+            String declarationSignature = returnType + " " + methodName + "(" + parametersWithoutArena + ") {";
+            if (!source.contains(declarationSignature)) {
                 String overload = "\n"
                     + indent + "public static " + returnType + " " + methodName + "(" + parametersWithoutArena + ") {\n"
                     + indent + "  return " + methodName + "(" + invocationArguments + ");\n"

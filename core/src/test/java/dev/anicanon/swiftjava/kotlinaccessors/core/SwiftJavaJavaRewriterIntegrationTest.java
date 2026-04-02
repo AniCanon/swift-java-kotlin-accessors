@@ -22,15 +22,11 @@ class SwiftJavaJavaRewriterIntegrationTest {
         );
         String result = rewriter.rewrite(input);
 
-        // Marker added
         assertTrue(result.contains("// Rewritten by swift-java-kotlin-accessors. Do not edit."));
-        // Import added
         assertTrue(result.contains("import org.jetbrains.annotations.Nullable;"));
-        // Optional rewritten to nullable
         assertTrue(result.contains("@Nullable"));
         assertTrue(result.contains("public String getName(SwiftArena swiftArena) {"));
         assertTrue(result.contains("return (result != 0L) ? value : null;"));
-        // Arena overload added
         assertTrue(result.contains("public String getName()"));
         assertTrue(result.contains("DEFAULT_SWIFT_JAVA_AUTO_ARENA"));
     }
@@ -93,7 +89,6 @@ class SwiftJavaJavaRewriterIntegrationTest {
 
         assertTrue(result.contains("public String getName(SwiftArena arena);"));
         assertTrue(result.contains("public Long getId();"));
-        // Two @Nullable annotations
         assertEquals(2, result.split("@Nullable").length - 1);
     }
 

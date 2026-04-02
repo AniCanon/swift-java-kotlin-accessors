@@ -116,7 +116,6 @@ class OptionalMethodRewriteRuleTest {
             ""
         );
         String result = rule.apply(input);
-        // Body doesn't match the Optional return pattern, so method is preserved as-is
         assertTrue(result.contains("Optional<String>"));
     }
 }

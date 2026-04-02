@@ -53,7 +53,6 @@ class StaticTrailingArenaOverloadRuleTest {
             ""
         );
         String result = rule.apply(input);
-        // Only original method, no overload
         assertEquals(1, result.split("public static").length - 1);
     }
 
@@ -66,7 +65,6 @@ class StaticTrailingArenaOverloadRuleTest {
             ""
         );
         String result = rule.apply(input);
-        // Pattern won't match because SwiftArena isn't at the end
         assertFalse(result.contains("DEFAULT_SWIFT_JAVA_AUTO_ARENA"));
     }
 

@@ -26,8 +26,8 @@ public final class ArenaGetterOverloadRule implements RewriteRule {
 
             output.append(source, last, methodEnd);
 
-            String noArgSignature = methodName + "()";
-            if (!source.contains(noArgSignature)) {
+            String declarationSignature = returnType + " " + methodName + "() {";
+            if (!source.contains(declarationSignature)) {
                 String overload = "\n"
                     + indent + "public " + returnType + " " + methodName + "() {\n"
                     + indent + "  return " + methodName + "(SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);\n"
