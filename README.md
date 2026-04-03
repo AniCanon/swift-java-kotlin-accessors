@@ -117,28 +117,20 @@ Trailing `SwiftArena` parameters are automatically stripped from the factory sig
 
 ## Installation
 
-### Composite build (recommended for development)
+Publish to your local Maven repository:
 
-In your `settings.gradle.kts`:
-
-```kotlin
-includeBuild("/path/to/swift-java-kotlin-accessors")
-```
-
-### Maven Local
-
-Build and publish locally:
-
-```shell
+```bash
 ./gradlew publishToMavenLocal
 ```
 
-Then add the plugin to your `settings.gradle.kts`:
+Add `mavenLocal()` to your `settings.gradle.kts` plugin repositories:
 
 ```kotlin
 pluginManagement {
     repositories {
         mavenLocal()
+        google()
+        mavenCentral()
         gradlePluginPortal()
     }
 }
@@ -150,7 +142,7 @@ Apply the plugin in your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("dev.anicanon.swift-java-kotlin-accessors")
+    id("dev.anicanon.swift-java-kotlin-accessors") version "0.1.0"
 }
 
 swiftJavaKotlinAccessors {
