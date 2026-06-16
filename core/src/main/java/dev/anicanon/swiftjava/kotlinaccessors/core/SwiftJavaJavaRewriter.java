@@ -3,6 +3,7 @@ package dev.anicanon.swiftjava.kotlinaccessors.core;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.AddNullableImportRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.AddRewriteMarkerRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.ArenaGetterOverloadRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.NormalizeQualifiedOptionalRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.OptionalInterfaceRewriteRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.OptionalMethodRewriteRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.OptionalParameterRewriteRule;
@@ -15,6 +16,9 @@ public final class SwiftJavaJavaRewriter {
 
     public SwiftJavaJavaRewriter(RewriteOptions options) {
         List<RewriteRule> rules = new ArrayList<>();
+        // Must run before the Optional rules: newer jextract fully-qualifies
+        // java.util.Optional, which those rules don't match in their bare form.
+        rules.add(new NormalizeQualifiedOptionalRule());
         rules.add(new AddRewriteMarkerRule());
         rules.add(new AddNullableImportRule(options));
 
