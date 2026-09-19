@@ -54,4 +54,31 @@ class ArenaGetterOverloadRuleTest {
         String result = rule.apply(input);
         assertTrue(result.contains("public String[] getNames()"));
     }
+
+    @Test
+    void carriesThrowsClauseOntoOverload() {
+        String input = String.join("\n",
+            "    public MyType getValue(SwiftArena swiftArena) throws Exception {",
+            "        return doStuff(swiftArena);",
+            "    }",
+            ""
+        );
+        String result = rule.apply(input);
+        assertTrue(result.contains("public MyType getValue() throws Exception {"));
+        assertEquals(result, rule.apply(result));
+    }
+
+    @Test
+    void skipsOverloadAlreadyRewrittenToList() {
+        String input = String.join("\n",
+            "    public Item[] getItems(SwiftArena swiftArena) {",
+            "        return fetch(swiftArena);",
+            "    }",
+            "    public java.util.List<Item> getItems() {",
+            "        return java.util.List.of(getItems(SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA));",
+            "    }",
+            ""
+        );
+        assertEquals(input, rule.apply(input));
+    }
 }

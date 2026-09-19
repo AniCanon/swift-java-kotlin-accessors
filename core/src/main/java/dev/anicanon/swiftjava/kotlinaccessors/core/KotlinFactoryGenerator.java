@@ -14,7 +14,8 @@ public final class KotlinFactoryGenerator {
         "(?m)^public\\s+(?:final\\s+)?class\\s+(\\w+)"
     );
     private static final Pattern STATIC_INIT_PATTERN = Pattern.compile(
-        "(?m)^\\s*public static (?:(<[^(){}]*>)\\s+)?(\\w+) init\\(([^)]*)\\)\\s*\\{"
+        "(?m)^\\s*public static (?:(<[^(){}]*>)\\s+)?(\\w+) init\\(([^)]*)\\)"
+            + SourceRewriteUtils.THROWS_CLAUSE + "\\s*\\{"
     );
     private static final Pattern OPTIONAL_PARAM_PATTERN = Pattern.compile(
         "\\bOptional<([\\w.$\\[\\]<>]+)>\\s+(\\w+)\\b"
@@ -55,15 +56,15 @@ public final class KotlinFactoryGenerator {
         kt.append("\n");
 
         for (InitMethod method : initMethods) {
-            String params = method.parameters;
-            String args = buildArguments(params);
-
+            String args = buildArguments(method.parameters);
             KotlinTypeParameters typeParameters = KotlinTypeParameters.from(method.javaTypeParameters);
-            kt.append("fun ").append(typeParameters.declaration).append(className).append("(");
+            String params = typeParameters.inlineSingleUseBounds(method.parameters);
+            typeParameters = typeParameters.withoutInlined(method.parameters);
+            kt.append("fun ").append(typeParameters.declaration()).append(className).append("(");
             if (!params.isEmpty()) {
                 kt.append(convertToKotlinParams(params, method.optionalParamNames));
             }
-            kt.append("): ").append(className).append(method.failable ? "?" : "").append(typeParameters.whereClause).append(" =\n");
+            kt.append("): ").append(className).append(method.failable ? "?" : "").append(typeParameters.whereClause()).append(" =\n");
             kt.append("    ").append(className).append(".`init`(");
             if (!args.isEmpty()) {
                 kt.append(args);
@@ -93,8 +94,7 @@ public final class KotlinFactoryGenerator {
 
     private List<InitMethod> findInitMethods(String source, String className,
                                               Map<List<String>, Set<String>> optionalsByMethod) {
-        Set<String> seen = new HashSet<>();
-        List<InitMethod> methods = new ArrayList<>();
+        Map<String, InitMethod> methods = new java.util.LinkedHashMap<>();
         Matcher matcher = STATIC_INIT_PATTERN.matcher(source);
         while (matcher.find()) {
             String returnType = matcher.group(2);
@@ -111,11 +111,15 @@ public final class KotlinFactoryGenerator {
             Set<String> optionalParamNames = paramNames.stream()
                 .filter(optionalNames::contains)
                 .collect(java.util.stream.Collectors.toSet());
-            if (seen.add(cleanedParams)) {
-                methods.add(new InitMethod(cleanedParams, optionalParamNames, isFailable(source, matcher.start()), matcher.group(1)));
+            InitMethod method = new InitMethod(cleanedParams, optionalParamNames, isFailable(source, matcher.start()), matcher.group(1));
+            String key = SourceRewriteUtils.withArraysAsLists(cleanedParams);
+            if (cleanedParams.equals(parameters)) {
+                methods.put(key, method);
+            } else {
+                methods.putIfAbsent(key, method);
             }
         }
-        return methods;
+        return new ArrayList<>(methods.values());
     }
 
     /**
@@ -204,6 +208,10 @@ public final class KotlinFactoryGenerator {
             String elementType = mapToKotlinType(javaType.substring(0, javaType.length() - 2));
             return "Array<" + elementType + ">";
         }
+        if (javaType.startsWith("java.util.List<") && javaType.endsWith(">")) {
+            String elementType = mapToKotlinType(javaType.substring("java.util.List<".length(), javaType.length() - 1));
+            return "List<" + elementType + ">";
+        }
         // java.lang.Character -> Char (FQN-qualified, unambiguous)
         // Unqualified "Character" is treated as a domain type and passes through,
         // since swift-java codegen produces domain classes named Character.
@@ -229,29 +237,82 @@ public final class KotlinFactoryGenerator {
         return SourceRewriteUtils.invocationArguments(parameters);
     }
 
-    /** Java {@code <T0 extends A & B, T1 extends C>} as Kotlin {@code <T0, T1>} plus a {@code where} clause. */
-    private record KotlinTypeParameters(String declaration, String whereClause) {
+    /**
+     * Java {@code <T0 extends A & B, T1 extends C>} as Kotlin {@code <T0, T1>} plus a {@code where} clause.
+     * A type parameter with a single bound that types exactly one parameter is written as
+     * that bound instead, so {@code <T0 extends ProjectClient> init(T0 projectClient)} becomes
+     * {@code (projectClient: ProjectClient)}.
+     */
+    private record KotlinTypeParameters(List<String> names, Map<String, List<String>> bounds) {
         static KotlinTypeParameters from(String javaTypeParameters) {
+            List<String> names = new ArrayList<>();
+            Map<String, List<String>> bounds = new java.util.LinkedHashMap<>();
             if (javaTypeParameters == null || javaTypeParameters.isBlank()) {
-                return new KotlinTypeParameters("", "");
+                return new KotlinTypeParameters(names, bounds);
             }
             String body = javaTypeParameters.trim();
             body = body.substring(1, body.length() - 1);
-            List<String> names = new ArrayList<>();
-            List<String> bounds = new ArrayList<>();
             for (String parameter : body.split(",")) {
                 String[] parts = parameter.trim().split("\\s+extends\\s+");
                 String name = parts[0].trim();
                 names.add(name);
+                List<String> nameBounds = new ArrayList<>();
                 if (parts.length > 1) {
                     for (String bound : parts[1].split("&")) {
-                        bounds.add(name + " : " + bound.trim());
+                        nameBounds.add(bound.trim());
                     }
                 }
+                bounds.put(name, nameBounds);
             }
-            String declaration = "<" + String.join(", ", names) + "> ";
-            String whereClause = bounds.isEmpty() ? "" : " where " + String.join(", ", bounds);
-            return new KotlinTypeParameters(declaration, whereClause);
+            return new KotlinTypeParameters(names, bounds);
+        }
+
+        private boolean isInlinable(String name, String javaParameters) {
+            if (bounds.get(name).size() != 1) {
+                return false;
+            }
+            Matcher uses = Pattern.compile("\\b" + Pattern.quote(name) + "\\b").matcher(javaParameters);
+            int count = 0;
+            while (uses.find()) {
+                count++;
+            }
+            return count == 1 && Pattern.compile("(^|,\\s*)" + Pattern.quote(name) + "\\s+\\w+\\s*(,|$)").matcher(javaParameters).find();
+        }
+
+        String inlineSingleUseBounds(String javaParameters) {
+            String result = javaParameters;
+            for (String name : names) {
+                if (isInlinable(name, javaParameters)) {
+                    result = result.replaceAll("\\b" + Pattern.quote(name) + "\\b", Matcher.quoteReplacement(bounds.get(name).get(0)));
+                }
+            }
+            return result;
+        }
+
+        KotlinTypeParameters withoutInlined(String javaParameters) {
+            List<String> remaining = new ArrayList<>();
+            Map<String, List<String>> remainingBounds = new java.util.LinkedHashMap<>();
+            for (String name : names) {
+                if (!isInlinable(name, javaParameters)) {
+                    remaining.add(name);
+                    remainingBounds.put(name, bounds.get(name));
+                }
+            }
+            return new KotlinTypeParameters(remaining, remainingBounds);
+        }
+
+        String declaration() {
+            return names.isEmpty() ? "" : "<" + String.join(", ", names) + "> ";
+        }
+
+        String whereClause() {
+            List<String> clauses = new ArrayList<>();
+            for (String name : names) {
+                for (String bound : bounds.get(name)) {
+                    clauses.add(name + " : " + bound);
+                }
+            }
+            return clauses.isEmpty() ? "" : " where " + String.join(", ", clauses);
         }
     }
 

@@ -7,7 +7,8 @@ import java.util.regex.Pattern;
 
 public final class ArenaGetterOverloadRule implements RewriteRule {
     private static final Pattern ARENA_GETTER_SIGNATURE = Pattern.compile(
-        "(?m)^(\\s*)public ([\\w.$\\[\\]<>]+) (get\\w+)\\(SwiftArena swiftArena\\) \\{$"
+        "(?m)^(\\s*)public ([\\w.$\\[\\]<>]+) (get\\w+)\\(SwiftArena swiftArena\\)"
+            + SourceRewriteUtils.THROWS_CLAUSE + " \\{$"
     );
 
     @Override
@@ -23,13 +24,14 @@ public final class ArenaGetterOverloadRule implements RewriteRule {
             String indent = matcher.group(1);
             String returnType = matcher.group(2);
             String methodName = matcher.group(3);
+            String throwsClause = matcher.group(4) == null ? "" : matcher.group(4);
 
             output.append(source, last, methodEnd);
 
-            String declarationSignature = returnType + " " + methodName + "() {";
-            if (!source.contains(declarationSignature)) {
+            String declaration = returnType + " " + methodName + "()";
+            if (!SourceRewriteUtils.containsDeclaration(source, declaration)) {
                 String overload = "\n"
-                    + indent + "public " + returnType + " " + methodName + "() {\n"
+                    + indent + "public " + declaration + throwsClause + " {\n"
                     + indent + "  return " + methodName + "(SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);\n"
                     + indent + "}\n";
                 output.append(overload);
