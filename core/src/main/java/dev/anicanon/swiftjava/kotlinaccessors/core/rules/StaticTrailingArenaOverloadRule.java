@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 public final class StaticTrailingArenaOverloadRule implements RewriteRule {
     private static final Pattern STATIC_TRAILING_ARENA_SIGNATURE = Pattern.compile(
-        "(?m)^(\\s*)public static ([\\w.$\\[\\]<>]+) (\\w+)\\(([^)]*\\bSwiftArena swiftArena)\\) \\{$"
+        "(?m)^(\\s*)public static (<[^(){}]*>\\s+)?([\\w.$\\[\\]<>]+) (\\w+)\\(([^)]*\\bSwiftArena swiftArena)\\) \\{$"
     );
 
     @Override
@@ -21,9 +21,10 @@ public final class StaticTrailingArenaOverloadRule implements RewriteRule {
             int methodEnd = SourceRewriteUtils.endOfLine(source, closeBrace);
 
             String indent = matcher.group(1);
-            String returnType = matcher.group(2);
-            String methodName = matcher.group(3);
-            String parameters = matcher.group(4).trim();
+            String typeParameters = matcher.group(2) == null ? "" : matcher.group(2).trim() + " ";
+            String returnType = matcher.group(3);
+            String methodName = matcher.group(4);
+            String parameters = matcher.group(5).trim();
 
             String parametersWithoutArena = SourceRewriteUtils.stripTrailingArenaParameter(parameters);
             if (methodName.startsWith("get") || methodName.equals("wrapMemoryAddressUnsafe") || parametersWithoutArena == null) {
@@ -43,7 +44,7 @@ public final class StaticTrailingArenaOverloadRule implements RewriteRule {
             String declarationSignature = returnType + " " + methodName + "(" + parametersWithoutArena + ") {";
             if (!source.contains(declarationSignature)) {
                 String overload = "\n"
-                    + indent + "public static " + returnType + " " + methodName + "(" + parametersWithoutArena + ") {\n"
+                    + indent + "public static " + typeParameters + returnType + " " + methodName + "(" + parametersWithoutArena + ") {\n"
                     + indent + "  return " + methodName + "(" + invocationArguments + ");\n"
                     + indent + "}\n";
                 output.append(overload);

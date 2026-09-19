@@ -79,4 +79,19 @@ class StaticTrailingArenaOverloadRuleTest {
         String result = rule.apply(input);
         assertTrue(result.contains("public static MyType create(String name, SwiftArena swiftArena) {"));
     }
+
+    @Test
+    void addsOverloadForGenericStaticMethods() {
+        String input = String.join("\n",
+            "public final class APIClient {",
+            "  public static <_T0 extends TokenProvider> APIClient init(_T0 tokenProvider, SwiftArena swiftArena) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+        String result = new StaticTrailingArenaOverloadRule().apply(input);
+        assertTrue(result.contains("public static <_T0 extends TokenProvider> APIClient init(_T0 tokenProvider) {"));
+        assertTrue(result.contains("return init(tokenProvider, SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);"));
+    }
 }

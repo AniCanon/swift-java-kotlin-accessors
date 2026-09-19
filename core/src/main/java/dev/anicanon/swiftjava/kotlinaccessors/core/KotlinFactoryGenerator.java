@@ -14,7 +14,7 @@ public final class KotlinFactoryGenerator {
         "(?m)^public\\s+(?:final\\s+)?class\\s+(\\w+)"
     );
     private static final Pattern STATIC_INIT_PATTERN = Pattern.compile(
-        "(?m)^\\s*public static (\\w+) init\\(([^)]*)\\)\\s*\\{"
+        "(?m)^\\s*public static (?:(<[^(){}]*>)\\s+)?(\\w+) init\\(([^)]*)\\)\\s*\\{"
     );
     private static final Pattern OPTIONAL_PARAM_PATTERN = Pattern.compile(
         "\\bOptional<([\\w.$\\[\\]<>]+)>\\s+(\\w+)\\b"
@@ -58,11 +58,12 @@ public final class KotlinFactoryGenerator {
             String params = method.parameters;
             String args = buildArguments(params);
 
-            kt.append("fun ").append(className).append("(");
+            KotlinTypeParameters typeParameters = KotlinTypeParameters.from(method.javaTypeParameters);
+            kt.append("fun ").append(typeParameters.declaration).append(className).append("(");
             if (!params.isEmpty()) {
                 kt.append(convertToKotlinParams(params, method.optionalParamNames));
             }
-            kt.append("): ").append(className).append(method.failable ? "?" : "").append(" =\n");
+            kt.append("): ").append(className).append(method.failable ? "?" : "").append(typeParameters.whereClause).append(" =\n");
             kt.append("    ").append(className).append(".`init`(");
             if (!args.isEmpty()) {
                 kt.append(args);
@@ -96,11 +97,11 @@ public final class KotlinFactoryGenerator {
         List<InitMethod> methods = new ArrayList<>();
         Matcher matcher = STATIC_INIT_PATTERN.matcher(source);
         while (matcher.find()) {
-            String returnType = matcher.group(1);
+            String returnType = matcher.group(2);
             if (!returnType.equals(className)) {
                 continue;
             }
-            String parameters = stripAnnotations(matcher.group(2).trim());
+            String parameters = stripAnnotations(matcher.group(3).trim());
             if (parameters.equals("SwiftArena swiftArena")) {
                 continue;
             }
@@ -111,7 +112,7 @@ public final class KotlinFactoryGenerator {
                 .filter(optionalNames::contains)
                 .collect(java.util.stream.Collectors.toSet());
             if (seen.add(cleanedParams)) {
-                methods.add(new InitMethod(cleanedParams, optionalParamNames, isFailable(source, matcher.start())));
+                methods.add(new InitMethod(cleanedParams, optionalParamNames, isFailable(source, matcher.start()), matcher.group(1)));
             }
         }
         return methods;
@@ -126,10 +127,10 @@ public final class KotlinFactoryGenerator {
         Map<List<String>, Set<String>> result = new HashMap<>();
         Matcher matcher = STATIC_INIT_PATTERN.matcher(originalSource);
         while (matcher.find()) {
-            if (!matcher.group(1).equals(className)) {
+            if (!matcher.group(2).equals(className)) {
                 continue;
             }
-            String params = matcher.group(2).trim();
+            String params = matcher.group(3).trim();
             Set<String> optionalNames = new HashSet<>();
             for (String part : params.split(",\\s*")) {
                 String trimmed = part.trim();
@@ -228,5 +229,31 @@ public final class KotlinFactoryGenerator {
         return SourceRewriteUtils.invocationArguments(parameters);
     }
 
-    private record InitMethod(String parameters, Set<String> optionalParamNames, boolean failable) {}
+    /** Java {@code <T0 extends A & B, T1 extends C>} as Kotlin {@code <T0, T1>} plus a {@code where} clause. */
+    private record KotlinTypeParameters(String declaration, String whereClause) {
+        static KotlinTypeParameters from(String javaTypeParameters) {
+            if (javaTypeParameters == null || javaTypeParameters.isBlank()) {
+                return new KotlinTypeParameters("", "");
+            }
+            String body = javaTypeParameters.trim();
+            body = body.substring(1, body.length() - 1);
+            List<String> names = new ArrayList<>();
+            List<String> bounds = new ArrayList<>();
+            for (String parameter : body.split(",")) {
+                String[] parts = parameter.trim().split("\\s+extends\\s+");
+                String name = parts[0].trim();
+                names.add(name);
+                if (parts.length > 1) {
+                    for (String bound : parts[1].split("&")) {
+                        bounds.add(name + " : " + bound.trim());
+                    }
+                }
+            }
+            String declaration = "<" + String.join(", ", names) + "> ";
+            String whereClause = bounds.isEmpty() ? "" : " where " + String.join(", ", bounds);
+            return new KotlinTypeParameters(declaration, whereClause);
+        }
+    }
+
+    private record InitMethod(String parameters, Set<String> optionalParamNames, boolean failable, String javaTypeParameters) {}
 }

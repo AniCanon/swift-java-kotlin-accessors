@@ -27,6 +27,31 @@ class KotlinFactoryGeneratorTest {
     }
 
     @Test
+    void generatesGenericFactoryForProtocolParameters() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class APIClient {",
+            "  public static <_T0 extends TokenProvider> APIClient init(_T0 tokenProvider) {",
+            "    return null;",
+            "  }",
+            "  public static <_T0 extends ProjectClient & Sendable, _T1 extends ProfileClient> APIClient init(_T0 projects, _T1 profiles, long count) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java, java);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun <_T0> APIClient(tokenProvider: _T0): APIClient where _T0 : TokenProvider ="));
+        assertTrue(kotlin.contains(
+            "fun <_T0, _T1> APIClient(projects: _T0, profiles: _T1, count: Long): APIClient "
+                + "where _T0 : ProjectClient, _T0 : Sendable, _T1 : ProfileClient ="
+        ));
+    }
+
+    @Test
     void returnsNullableForFailableInitializers() {
         String java = String.join("\n",
             "package com.example;",
