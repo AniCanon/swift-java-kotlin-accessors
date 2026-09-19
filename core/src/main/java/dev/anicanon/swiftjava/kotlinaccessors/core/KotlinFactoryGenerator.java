@@ -17,6 +17,9 @@ public final class KotlinFactoryGenerator {
         "(?m)^\\s*public static (?:(<[^(){}]*>)\\s+)?(\\w+) init\\(([^)]*)\\)"
             + SourceRewriteUtils.THROWS_CLAUSE + "\\s*\\{"
     );
+    private static final Pattern ORIGINAL_INIT_PATTERN = Pattern.compile(
+        "(?m)^\\s*public static (?:<[^(){}]*>\\s+)?(?:(?:java\\.util\\.)?Optional<(\\w+)>|(\\w+)) init\\(([^)]*)\\)"
+    );
     private static final Pattern OPTIONAL_PARAM_PATTERN = Pattern.compile(
         "\\bOptional<([\\w.$\\[\\]<>]+)>\\s+(\\w+)\\b"
     );
@@ -129,9 +132,10 @@ public final class KotlinFactoryGenerator {
      */
     private Map<List<String>, Set<String>> findOptionalParamsByMethod(String originalSource, String className) {
         Map<List<String>, Set<String>> result = new HashMap<>();
-        Matcher matcher = STATIC_INIT_PATTERN.matcher(originalSource);
+        Matcher matcher = ORIGINAL_INIT_PATTERN.matcher(originalSource);
         while (matcher.find()) {
-            if (!matcher.group(2).equals(className)) {
+            String returnType = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            if (!returnType.equals(className)) {
                 continue;
             }
             String params = matcher.group(3).trim();

@@ -563,4 +563,34 @@ class KotlinFactoryGeneratorTest {
         assertTrue(kotlin.contains("    ProjectFollowState.`init`(projectId, followerCount)"));
         assertEquals(1, kotlin.split("fun ProjectFollowState\\(").length - 1);
     }
+
+    @Test
+    void failableInitKeepsOptionalParametersNullable() {
+        String original = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class Route {",
+            "  public static java.util.Optional<Route> init(java.lang.String projectId, Optional<String> characterId, SwiftArena swiftArena) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+        String rewritten = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class Route {",
+            "  public static Route init(java.lang.String projectId, String characterId, SwiftArena swiftArena) {",
+            "    return null;",
+            "  }",
+            "  public static Route init(java.lang.String projectId, String characterId) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+        String kotlin = generator.generate(rewritten, original);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun Route(projectId: String, characterId: String?)"), kotlin);
+    }
 }
