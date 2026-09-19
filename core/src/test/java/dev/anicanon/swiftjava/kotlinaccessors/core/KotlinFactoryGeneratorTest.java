@@ -27,6 +27,42 @@ class KotlinFactoryGeneratorTest {
     }
 
     @Test
+    void returnsNullableForFailableInitializers() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class Stage {",
+            "  // ==== --------------------------------------------------",
+            "  // init:Stage.init(rawValue:)",
+            "  /**",
+            "   * {@snippet lang=swift :",
+            "   * public init?(rawValue: String)",
+            "   * }",
+            "   */",
+            "  public static Stage init(java.lang.String rawValue) {",
+            "    return null;",
+            "  }",
+            "  // ==== --------------------------------------------------",
+            "  // init:Stage.init(name:)",
+            "  /**",
+            "   * {@snippet lang=swift :",
+            "   * public init(name: String)",
+            "   * }",
+            "   */",
+            "  public static Stage init(java.lang.String name, long count) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java, java);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun Stage(rawValue: String): Stage? ="));
+        assertTrue(kotlin.contains("fun Stage(name: String, count: Long): Stage ="));
+    }
+
+    @Test
     void generatesFactoryWithMultipleParameters() {
         String java = String.join("\n",
             "package com.example;",

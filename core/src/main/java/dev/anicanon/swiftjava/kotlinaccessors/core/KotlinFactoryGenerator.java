@@ -62,7 +62,7 @@ public final class KotlinFactoryGenerator {
             if (!params.isEmpty()) {
                 kt.append(convertToKotlinParams(params, method.optionalParamNames));
             }
-            kt.append("): ").append(className).append(" =\n");
+            kt.append("): ").append(className).append(method.failable ? "?" : "").append(" =\n");
             kt.append("    ").append(className).append(".`init`(");
             if (!args.isEmpty()) {
                 kt.append(args);
@@ -71,6 +71,13 @@ public final class KotlinFactoryGenerator {
         }
 
         return kt.toString().stripTrailing() + "\n";
+    }
+
+    /** A Swift failable initializer ({@code init?}) returns null from Java when it fails. */
+    private static boolean isFailable(String source, int initStart) {
+        int sectionStart = source.lastIndexOf("// ====", initStart);
+        String section = source.substring(Math.max(sectionStart, 0), initStart);
+        return section.contains("init?(");
     }
 
     private String extractClassName(String source) {
@@ -104,7 +111,7 @@ public final class KotlinFactoryGenerator {
                 .filter(optionalNames::contains)
                 .collect(java.util.stream.Collectors.toSet());
             if (seen.add(cleanedParams)) {
-                methods.add(new InitMethod(cleanedParams, optionalParamNames));
+                methods.add(new InitMethod(cleanedParams, optionalParamNames, isFailable(source, matcher.start())));
             }
         }
         return methods;
@@ -221,5 +228,5 @@ public final class KotlinFactoryGenerator {
         return SourceRewriteUtils.invocationArguments(parameters);
     }
 
-    private record InitMethod(String parameters, Set<String> optionalParamNames) {}
+    private record InitMethod(String parameters, Set<String> optionalParamNames, boolean failable) {}
 }

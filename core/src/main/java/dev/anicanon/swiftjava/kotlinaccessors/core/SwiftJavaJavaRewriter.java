@@ -3,6 +3,8 @@ package dev.anicanon.swiftjava.kotlinaccessors.core;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.AddNullableImportRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.AddRewriteMarkerRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.ArenaGetterOverloadRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.BooleanGetterNamingRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.EnumCaseNamingRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.NormalizeQualifiedOptionalRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.OptionalInterfaceRewriteRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.OptionalMethodRewriteRule;
@@ -33,6 +35,8 @@ public final class SwiftJavaJavaRewriter {
         rules.add(new OptionalParameterRewriteRule());
         rules.add(new ArenaGetterOverloadRule());
         rules.add(new StaticTrailingArenaOverloadRule());
+        rules.add(new EnumCaseNamingRule());
+        rules.add(new BooleanGetterNamingRule());
 
         this.pipeline = List.copyOf(rules);
     }
