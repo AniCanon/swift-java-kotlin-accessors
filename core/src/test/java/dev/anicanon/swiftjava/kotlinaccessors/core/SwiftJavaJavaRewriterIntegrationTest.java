@@ -164,4 +164,34 @@ class SwiftJavaJavaRewriterIntegrationTest {
         String second = rewriter.rewrite(first);
         assertEquals(first, second);
     }
+
+    @Test
+    void fullPipelineExposesArraysAsListsIdempotently() {
+        String input = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class ProjectDiscovery {",
+            "  public static ProjectListItem[] topPublicProjects(ProjectListItem[] projects, SwiftArena swiftArena) "
+                + "throws SwiftIntegerOverflowException {",
+            "    return Arrays.stream(ProjectDiscovery.$topPublicProjects(Arrays.stream(Objects.requireNonNull(projects, "
+                + "\"projects must not be null\")).mapToLong(ProjectListItem::$memoryAddress).toArray())).mapToObj((pointer) -> {",
+            "      return ProjectListItem.wrapMemoryAddressUnsafe(pointer, swiftArena);",
+            "    }",
+            "    ).toArray(ProjectListItem[]::new);",
+            "  }",
+            "  public ProjectListItem[] getProjects(SwiftArena swiftArena) {",
+            "    return fetch(swiftArena);",
+            "  }",
+            "}",
+            ""
+        );
+        String first = rewriter.rewrite(input);
+        assertTrue(first.contains(
+            "public static java.util.List<ProjectListItem> topPublicProjects(java.util.List<ProjectListItem> projects) "
+                + "throws SwiftIntegerOverflowException {"
+        ));
+        assertTrue(first.contains("public java.util.List<ProjectListItem> getProjects() {"));
+        assertTrue(first.contains("public static ProjectListItem[] topPublicProjects(ProjectListItem[] projects, SwiftArena swiftArena)"));
+        assertEquals(first, rewriter.rewrite(first));
+    }
 }

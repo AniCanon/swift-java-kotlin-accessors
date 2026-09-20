@@ -79,4 +79,52 @@ class StaticTrailingArenaOverloadRuleTest {
         String result = rule.apply(input);
         assertTrue(result.contains("public static MyType create(String name, SwiftArena swiftArena) {"));
     }
+
+    @Test
+    void addsOverloadForGenericStaticMethods() {
+        String input = String.join("\n",
+            "public final class APIClient {",
+            "  public static <_T0 extends TokenProvider> APIClient init(_T0 tokenProvider, SwiftArena swiftArena) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+        String result = new StaticTrailingArenaOverloadRule().apply(input);
+        assertTrue(result.contains("public static <_T0 extends TokenProvider> APIClient init(_T0 tokenProvider) {"));
+        assertTrue(result.contains("return init(tokenProvider, SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);"));
+    }
+
+    @Test
+    void carriesThrowsClauseOntoOverload() {
+        String input = String.join("\n",
+            "  public static ProjectFollowState init(java.lang.String projectId, long followerCount, SwiftArena swiftArena) "
+                + "throws SwiftIntegerOverflowException {",
+            "    return null;",
+            "  }",
+            ""
+        );
+        String result = rule.apply(input);
+        assertTrue(result.contains(
+            "  public static ProjectFollowState init(java.lang.String projectId, long followerCount) throws SwiftIntegerOverflowException {\n"
+                + "    return init(projectId, followerCount, SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);\n"
+                + "  }"
+        ));
+        assertEquals(result, rule.apply(result));
+    }
+
+    @Test
+    void skipsOverloadAlreadyRewrittenToLists() {
+        String input = String.join("\n",
+            "  public static Item[] top(Item[] items, SwiftArena swiftArena) {",
+            "    return null;",
+            "  }",
+            "",
+            "  public static java.util.List<Item> top(java.util.List<Item> items) {",
+            "    return java.util.List.of(top(items.toArray(new Item[0]), SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA));",
+            "  }",
+            ""
+        );
+        assertEquals(input, rule.apply(input));
+    }
 }

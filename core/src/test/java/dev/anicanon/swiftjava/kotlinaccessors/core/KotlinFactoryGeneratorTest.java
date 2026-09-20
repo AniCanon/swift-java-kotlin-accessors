@@ -27,6 +27,68 @@ class KotlinFactoryGeneratorTest {
     }
 
     @Test
+    void generatesGenericFactoryForProtocolParameters() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class APIClient {",
+            "  public static <_T0 extends TokenProvider> APIClient init(_T0 tokenProvider) {",
+            "    return null;",
+            "  }",
+            "  public static <_T0 extends ProjectClient & Sendable, _T1 extends ProfileClient> APIClient init(_T0 projects, _T1 profiles, long count) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java, java);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun APIClient(tokenProvider: TokenProvider): APIClient ="));
+        assertTrue(kotlin.contains("    APIClient.`init`(tokenProvider)"));
+        assertTrue(kotlin.contains(
+            "fun <_T0> APIClient(projects: _T0, profiles: ProfileClient, count: Long): APIClient "
+                + "where _T0 : ProjectClient, _T0 : Sendable ="
+        ));
+    }
+
+    @Test
+    void returnsNullableForFailableInitializers() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class Stage {",
+            "  // ==== --------------------------------------------------",
+            "  // init:Stage.init(rawValue:)",
+            "  /**",
+            "   * {@snippet lang=swift :",
+            "   * public init?(rawValue: String)",
+            "   * }",
+            "   */",
+            "  public static Stage init(java.lang.String rawValue) {",
+            "    return null;",
+            "  }",
+            "  // ==== --------------------------------------------------",
+            "  // init:Stage.init(name:)",
+            "  /**",
+            "   * {@snippet lang=swift :",
+            "   * public init(name: String)",
+            "   * }",
+            "   */",
+            "  public static Stage init(java.lang.String name, long count) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java, java);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun Stage(rawValue: String): Stage? ="));
+        assertTrue(kotlin.contains("fun Stage(name: String, count: Long): Stage ="));
+    }
+
+    @Test
     void generatesFactoryWithMultipleParameters() {
         String java = String.join("\n",
             "package com.example;",
@@ -451,5 +513,84 @@ class KotlinFactoryGeneratorTest {
         String kotlin = generator.generate(rewritten, original);
         assertNotNull(kotlin);
         assertTrue(kotlin.contains("fun Model(name: String, timestamp: Long?, count: Int?): Model ="));
+    }
+
+    @Test
+    void mapsListParametersToKotlinLists() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public class Container {",
+            "    public static Container init(Item[] items, java.lang.String[] names, SwiftArena swiftArena) {",
+            "        return new Container();",
+            "    }",
+            "    public static Container init(java.util.List<Item> items, java.util.List<java.lang.String> names) {",
+            "        return init(items.toArray(new Item[0]), names.toArray(new java.lang.String[0]), DEFAULT_ARENA);",
+            "    }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java, java);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun Container(items: List<Item>, names: List<String>): Container ="));
+        assertTrue(kotlin.contains("    Container.`init`(items, names)"));
+        assertFalse(kotlin.contains("Array<"));
+        assertEquals(1, kotlin.split("fun Container\\(").length - 1);
+    }
+
+    @Test
+    void generatesFactoryForThrowingInit() {
+        String java = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class ProjectFollowState {",
+            "  public static ProjectFollowState init(java.lang.String projectId, long followerCount, SwiftArena swiftArena) "
+                + "throws SwiftIntegerOverflowException {",
+            "    return null;",
+            "  }",
+            "",
+            "  public static ProjectFollowState init(java.lang.String projectId, long followerCount) throws SwiftIntegerOverflowException {",
+            "    return init(projectId, followerCount, SwiftMemoryManagement.DEFAULT_SWIFT_JAVA_AUTO_ARENA);",
+            "  }",
+            "}",
+            ""
+        );
+
+        String kotlin = generator.generate(java, java);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun ProjectFollowState(projectId: String, followerCount: Long): ProjectFollowState ="));
+        assertTrue(kotlin.contains("    ProjectFollowState.`init`(projectId, followerCount)"));
+        assertEquals(1, kotlin.split("fun ProjectFollowState\\(").length - 1);
+    }
+
+    @Test
+    void failableInitKeepsOptionalParametersNullable() {
+        String original = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class Route {",
+            "  public static java.util.Optional<Route> init(java.lang.String projectId, Optional<String> characterId, SwiftArena swiftArena) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+        String rewritten = String.join("\n",
+            "package com.example;",
+            "",
+            "public final class Route {",
+            "  public static Route init(java.lang.String projectId, String characterId, SwiftArena swiftArena) {",
+            "    return null;",
+            "  }",
+            "  public static Route init(java.lang.String projectId, String characterId) {",
+            "    return null;",
+            "  }",
+            "}",
+            ""
+        );
+        String kotlin = generator.generate(rewritten, original);
+        assertNotNull(kotlin);
+        assertTrue(kotlin.contains("fun Route(projectId: String, characterId: String?)"), kotlin);
     }
 }

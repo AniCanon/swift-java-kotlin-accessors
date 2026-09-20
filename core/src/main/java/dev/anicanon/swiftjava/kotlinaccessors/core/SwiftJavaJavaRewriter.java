@@ -3,10 +3,17 @@ package dev.anicanon.swiftjava.kotlinaccessors.core;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.AddNullableImportRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.AddRewriteMarkerRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.ArenaGetterOverloadRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.ArrayListRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.BooleanGetterNamingRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.EnumCaseNamingRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.InstanceTrailingArenaOverloadRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.InterfaceArenaGetterDefaultRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.NormalizeQualifiedOptionalRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.OptionalInterfaceRewriteRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.OptionalMethodRewriteRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.OptionalParameterRewriteRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.StaticArrayConstantRule;
+import dev.anicanon.swiftjava.kotlinaccessors.core.rules.StaticConstantRule;
 import dev.anicanon.swiftjava.kotlinaccessors.core.rules.StaticTrailingArenaOverloadRule;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +40,13 @@ public final class SwiftJavaJavaRewriter {
         rules.add(new OptionalParameterRewriteRule());
         rules.add(new ArenaGetterOverloadRule());
         rules.add(new StaticTrailingArenaOverloadRule());
+        rules.add(new InstanceTrailingArenaOverloadRule());
+        rules.add(new InterfaceArenaGetterDefaultRule());
+        rules.add(new EnumCaseNamingRule());
+        rules.add(new BooleanGetterNamingRule());
+        rules.add(new StaticConstantRule());
+        rules.add(new StaticArrayConstantRule());
+        rules.add(new ArrayListRule());
 
         this.pipeline = List.copyOf(rules);
     }
